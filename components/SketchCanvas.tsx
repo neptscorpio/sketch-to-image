@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, useEffect } from "react";
+import { useRef, useState, useEffect, useId } from "react";
 
 interface Props {
   onGenerate: (imageData: string, prompt: string) => void;
@@ -13,6 +13,7 @@ export default function SketchCanvas({ onGenerate, isLoading }: Props) {
   const [brushSize, setBrushSize] = useState(4);
   const [color, setColor] = useState("#000000");
   const [prompt, setPrompt] = useState("");
+  const sliderId = useId().replace(/:/g, "-");
   const lastPos = useRef<{ x: number; y: number } | null>(null);
   const history = useRef<ImageData[]>([]);
   const redoStack = useRef<ImageData[]>([]);
@@ -166,12 +167,18 @@ export default function SketchCanvas({ onGenerate, isLoading }: Props) {
       </div>
 
       {/* Row 2: 笔刷大小 */}
+      <style dangerouslySetInnerHTML={{ __html: `
+        #${sliderId} { -webkit-appearance: none; appearance: none; height: 4px; background: #e5e7eb; border-radius: 9999px; outline: none; width: 100%; }
+        #${sliderId}::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: ${Math.max(12, brushSize)}px; height: ${Math.max(12, brushSize)}px; border-radius: 50%; background: #6366f1; cursor: pointer; border: 2px solid white; box-shadow: 0 0 0 1.5px #6366f1; }
+        #${sliderId}::-moz-range-thumb { width: ${Math.max(12, brushSize)}px; height: ${Math.max(12, brushSize)}px; border-radius: 50%; background: #6366f1; cursor: pointer; border: 2px solid white; box-shadow: 0 0 0 1.5px #6366f1; border: 2px solid white; }
+      ` }} />
       <div className="flex items-center gap-3 text-sm text-gray-500">
         <span className="shrink-0">笔刷</span>
         <input
-          type="range" min={2} max={30} value={brushSize}
+          id={sliderId}
+          type="range" min={2} max={50} value={brushSize}
           onChange={(e) => setBrushSize(Number(e.target.value))}
-          className="flex-1 accent-indigo-500"
+          className="flex-1"
         />
         <span className="w-8 text-right">{brushSize}px</span>
       </div>
