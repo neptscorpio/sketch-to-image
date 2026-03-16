@@ -2,13 +2,20 @@
 
 import { useRef, useState, useEffect, useId } from "react";
 import { useCanvasHistory } from "@/hooks/useCanvasHistory";
+import type { Model } from "@/lib/types";
 
 interface Props {
-  onGenerate: (imageData: string, prompt: string) => void;
+  onGenerate: (imageData: string, prompt: string, model: Model) => void;
   isLoading: boolean;
 }
 
 const COLORS = ["#000000", "#ef4444", "#3b82f6", "#22c55e", "#f97316", "#a855f7", "#ffffff"];
+
+const MODEL_OPTIONS: { value: Model; label: string; hint: string }[] = [
+  { value: "wanx",         label: "万相",            hint: "草图还原度高，prompt 必填" },
+  { value: "seedream",     label: "Seedream 4.5",    hint: "画质更精细，prompt 选填" },
+  { value: "seedream5lite",label: "Seedream 5 Lite", hint: "最新模型，prompt 选填" },
+];
 
 export default function SketchCanvas({ onGenerate, isLoading }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -16,6 +23,7 @@ export default function SketchCanvas({ onGenerate, isLoading }: Props) {
   const [brushSize, setBrushSize] = useState(4);
   const [color, setColor] = useState("#000000");
   const [prompt, setPrompt] = useState("");
+  const [model, setModel] = useState<Model>("wanx");
   const lastPos = useRef<{ x: number; y: number } | null>(null);
   const sliderId = useId().replace(/:/g, "-");
 
@@ -94,7 +102,33 @@ export default function SketchCanvas({ onGenerate, isLoading }: Props) {
     ctx.fillRect(0, 0, canvas.width, canvas.height);
   };
 
+  const handleUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = canvasRef.current!;
+        const ctx = canvas.getContext("2d")!;
+        saveHistory();
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        // 保持比例居中绘制
+        const scale = Math.min(canvas.width / img.width, canvas.height / img.height);
+        const x = (canvas.width  - img.width  * scale) / 2;
+        const y = (canvas.height - img.height * scale) / 2;
+        ctx.drawImage(img, x, y, img.width * scale, img.height * scale);
+        saveHistory();
+      };
+      img.src = ev.target!.result as string;
+    };
+    reader.readAsDataURL(file);
+    e.target.value = ""; // 允许重复上传同一文件
+  };
+
   const thumbSize = Math.max(12, brushSize);
+  const promptRequired = model === "wanx";
 
   return (
     <div className="flex flex-col gap-3">
@@ -125,6 +159,10 @@ export default function SketchCanvas({ onGenerate, isLoading }: Props) {
         <button onClick={clear} className="flex-1 py-1.5 text-sm text-gray-500 border border-gray-300 rounded-lg active:bg-gray-100">
           清空
         </button>
+        <label className="flex-1 py-1.5 text-sm text-gray-500 border border-gray-300 rounded-lg active:bg-gray-100 cursor-pointer text-center">
+          📁 上传
+          <input type="file" accept="image/*" className="hidden" onChange={handleUpload} />
+        </label>
       </div>
 
       {/* 笔刷大小 */}
@@ -162,15 +200,35 @@ export default function SketchCanvas({ onGenerate, isLoading }: Props) {
       {/* 描述输入 */}
       <input
         type="text"
-        placeholder="描述你想生成的图片，如：a bird flying over the sea（必填）"
+        placeholder={promptRequired
+          ? "描述你想生成的图片，如：a bird flying over the sea（必填）"
+          : "描述你想生成的图片，如：a bird flying over the sea（选填）"}
         value={prompt}
         onChange={(e) => setPrompt(e.target.value)}
         className="w-full px-4 py-3 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
       />
 
+      {/* 模型选择 */}
+      <div className="flex gap-2">
+        {MODEL_OPTIONS.map(({ value, label, hint }) => (
+          <button
+            key={value}
+            onClick={() => setModel(value)}
+            title={hint}
+            className={`flex-1 py-1.5 text-sm rounded-lg border transition-colors ${
+              model === value
+                ? "bg-indigo-500 text-white border-indigo-500"
+                : "text-gray-500 border-gray-300 hover:border-indigo-300"
+            }`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
       {/* 生成按钮 */}
       <button
-        onClick={() => onGenerate(canvasRef.current!.toDataURL("image/jpeg", 0.9), prompt)}
+        onClick={() => onGenerate(canvasRef.current!.toDataURL("image/jpeg", 0.9), prompt, model)}
         disabled={isLoading}
         className="w-full py-3.5 bg-indigo-500 hover:bg-indigo-600 disabled:bg-indigo-300 active:bg-indigo-700 text-white font-bold rounded-xl transition-colors text-base"
       >

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import SketchCanvas from "@/components/SketchCanvas";
 import ResultPanel from "@/components/ResultPanel";
+import type { Model } from "@/lib/types";
 
 type Tab = "draw" | "result";
 
@@ -14,7 +15,7 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
   const [tab, setTab] = useState<Tab>("draw");
 
-  const handleGenerate = async (imageData: string, prompt: string) => {
+  const handleGenerate = async (imageData: string, prompt: string, model: Model) => {
     setIsLoading(true);
     setError(null);
     setSketchData(imageData);
@@ -25,7 +26,7 @@ export default function Home() {
       const res = await fetch("/api/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ imageData, prompt }),
+        body: JSON.stringify({ imageData, prompt, model }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "生成失败");

@@ -1,13 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
+import type { Model } from "@/lib/types";
 
-const API_KEY    = process.env.DASHSCOPE_API_KEY!;
-const SUBMIT_URL = "https://dashscope.aliyuncs.com/api/v1/services/aigc/image2image/image-synthesis/";
-const TASK_URL   = "https://dashscope.aliyuncs.com/api/v1/tasks";
+// ── DashScope / 万相 ──────────────────────────────────────────
+const DASHSCOPE_KEY = process.env.DASHSCOPE_API_KEY!;
+const SUBMIT_URL    = "https://dashscope.aliyuncs.com/api/v1/services/aigc/image2image/image-synthesis/";
+const TASK_URL      = "https://dashscope.aliyuncs.com/api/v1/tasks";
 
 async function uploadToOSS(base64: string): Promise<string> {
   const policyRes = await fetch(
     "https://dashscope.aliyuncs.com/api/v1/uploads?action=getPolicy&model=wanx-sketch-to-image-lite",
-    { headers: { Authorization: `Bearer ${API_KEY}` } }
+    { headers: { Authorization: `Bearer ${DASHSCOPE_KEY}` } }
   );
   const policyData = await policyRes.json();
   if (!policyRes.ok) throw new Error(`获取凭证失败: ${JSON.stringify(policyData)}`);
@@ -36,15 +38,14 @@ async function uploadToOSS(base64: string): Promise<string> {
     const text = await uploadRes.text();
     throw new Error(`OSS 上传失败: ${uploadRes.status} - ${text}`);
   }
-
   return `oss://${key}`;
 }
 
-async function submitTask(sketchUrl: string, prompt: string): Promise<string> {
+async function submitWanxTask(sketchUrl: string, prompt: string): Promise<string> {
   const res = await fetch(SUBMIT_URL, {
     method: "POST",
     headers: {
-      Authorization:                    `Bearer ${API_KEY}`,
+      Authorization:                    `Bearer ${DASHSCOPE_KEY}`,
       "Content-Type":                   "application/json",
       "X-DashScope-Async":              "enable",
       "X-DashScope-OssResourceResolve": "enable",
@@ -64,7 +65,7 @@ async function pollTask(taskId: string): Promise<string> {
   for (let i = 0; i < 30; i++) {
     await new Promise((r) => setTimeout(r, 3000));
     const res  = await fetch(`${TASK_URL}/${taskId}`, {
-      headers: { Authorization: `Bearer ${API_KEY}` },
+      headers: { Authorization: `Bearer ${DASHSCOPE_KEY}` },
     });
     const data = await res.json();
     const status = data.output?.task_status;
@@ -74,13 +75,61 @@ async function pollTask(taskId: string): Promise<string> {
   throw new Error("生成超时，请重试");
 }
 
+async function generateWithWanx(imageData: string, prompt: string): Promise<string> {
+  const sketchUrl = await uploadToOSS(imageData);
+  const taskId    = await submitWanxTask(sketchUrl, prompt);
+  return pollTask(taskId);
+}
+
+// ── Seedream 4.5 / 火山引擎 ───────────────────────────────────
+const VOLC_KEY     = process.env.VOLC_API_KEY!;
+const SEEDREAM_URL = "https://ark.cn-beijing.volces.com/api/v3/images/generations";
+
+const SEEDREAM_MODEL_IDS: Record<string, string> = {
+  seedream:      "doubao-seedream-4-5-251128",
+  seedream5lite: "doubao-seedream-5-0-260128",
+};
+
+async function generateWithSeedream(imageData: string, prompt: string, modelKey: string): Promise<string> {
+  const effectivePrompt = prompt.trim() || "high quality artistic image";
+  const body: Record<string, unknown> = {
+    model:  SEEDREAM_MODEL_IDS[modelKey],
+    prompt: effectivePrompt,
+    size:   "2048x2048",
+    n:      1,
+  };
+  if (imageData) body.image = [imageData];
+
+  const res = await fetch(SEEDREAM_URL, {
+    method: "POST",
+    headers: {
+      Authorization:  `Bearer ${VOLC_KEY}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(body),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(`Seedream 生成失败: ${data.error?.message ?? JSON.stringify(data)}`);
+  return data.data[0].url as string;
+}
+
+// ── Route handler ─────────────────────────────────────────────
 export async function POST(req: NextRequest) {
   try {
-    const { imageData, prompt } = await req.json();
+    const { imageData, prompt, model = "wanx" } = await req.json() as {
+      imageData: string;
+      prompt: string;
+      model?: Model;
+    };
+
+    if (model === "seedream" || model === "seedream5lite") {
+      const imageUrl = await generateWithSeedream(imageData, prompt, model);
+      return NextResponse.json({ image: imageUrl });
+    }
+
+    // 万相: prompt required
     if (!prompt?.trim()) return NextResponse.json({ error: "请填写描述" }, { status: 400 });
-    const sketchUrl = await uploadToOSS(imageData);
-    const taskId    = await submitTask(sketchUrl, prompt);
-    const imageUrl  = await pollTask(taskId);
+    const imageUrl = await generateWithWanx(imageData, prompt);
     return NextResponse.json({ image: imageUrl });
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
