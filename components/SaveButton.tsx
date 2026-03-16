@@ -41,11 +41,11 @@ export default function SaveButton({ imageUrl, sketchData, prompt }: Props) {
     <div className="mt-3 space-y-2">
       <button
         onClick={handleSave}
-        className="w-full py-3.5 bg-indigo-50 hover:bg-indigo-100 active:bg-indigo-200 text-indigo-600 font-bold rounded-xl text-base transition-colors"
+        className="w-full py-3.5 bg-indigo-900 hover:bg-indigo-800 active:bg-indigo-700 text-indigo-300 font-bold rounded-xl text-base transition-colors"
       >
         ⬇️ 保存图片
       </button>
-      <label className="flex items-center gap-2 text-sm text-gray-500 cursor-pointer select-none px-1">
+      <label className="flex items-center gap-2 text-sm text-gray-500 cursor-pointer select-none px-1 dark:text-gray-400">
         <input
           type="checkbox"
           checked={saveSketch}

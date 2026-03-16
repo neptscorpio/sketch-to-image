@@ -41,18 +41,18 @@ export default function Home() {
   const resultPanelProps = { isLoading, error, image: generatedImage, sketchData, prompt: lastPrompt };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-purple-50 flex flex-col">
+    <div className="min-h-screen bg-black flex flex-col">
       <header className="py-4 px-4 text-center">
-        <h1 className="text-2xl font-bold text-indigo-700">🎨 涂鸦神笔</h1>
-        <p className="text-gray-400 text-xs mt-1">随手涂鸦，AI 帮你变成精美图片</p>
+        <h1 className="text-2xl font-bold text-indigo-400">🎨 涂鸦神笔</h1>
+        <p className="text-gray-500 text-xs mt-1">随手涂鸦，AI 帮你变成精美图片</p>
       </header>
 
       {/* 移动端 Tab 切换 */}
-      <div className="md:hidden flex mx-4 mb-3 bg-white rounded-xl shadow-sm p-1">
+      <div className="md:hidden flex mx-4 mb-3 bg-[#111111] rounded-xl shadow-sm p-1">
         <button
           onClick={() => setTab("draw")}
           className={`flex-1 py-2 rounded-lg text-sm font-semibold transition-colors ${
-            tab === "draw" ? "bg-indigo-500 text-white shadow" : "text-gray-400"
+            tab === "draw" ? "bg-indigo-600 text-white shadow" : "text-gray-500"
           }`}
         >
           ✏️ 画布
@@ -60,7 +60,7 @@ export default function Home() {
         <button
           onClick={() => setTab("result")}
           className={`flex-1 py-2 rounded-lg text-sm font-semibold transition-colors relative ${
-            tab === "result" ? "bg-indigo-500 text-white shadow" : "text-gray-400"
+            tab === "result" ? "bg-indigo-600 text-white shadow" : "text-gray-500"
           }`}
         >
           🖼️ 结果
@@ -71,18 +71,18 @@ export default function Home() {
       <main className="flex-1 px-4 pb-6 max-w-5xl w-full mx-auto">
         {/* 桌面端双栏布局 */}
         <div className="hidden md:grid md:grid-cols-2 gap-6">
-          <div className="bg-white rounded-2xl shadow-md p-5">
-            <h2 className="font-semibold text-gray-700 mb-3">✏️ 画布</h2>
+          <div className="bg-[#111111] rounded-2xl shadow-md p-5 border border-[#222222]">
+            <h2 className="font-semibold text-gray-300 mb-3">✏️ 画布</h2>
             <SketchCanvas onGenerate={handleGenerate} isLoading={isLoading} />
           </div>
-          <div className="bg-white rounded-2xl shadow-md p-5 flex flex-col">
-            <h2 className="font-semibold text-gray-700 mb-3">🖼️ 生成结果</h2>
+          <div className="bg-[#111111] rounded-2xl shadow-md p-5 flex flex-col border border-[#222222]">
+            <h2 className="font-semibold text-gray-300 mb-3">🖼️ 生成结果</h2>
             <ResultPanel {...resultPanelProps} />
           </div>
         </div>
 
         {/* 移动端 Tab 内容 */}
-        <div className="md:hidden bg-white rounded-2xl shadow-md p-4">
+        <div className="md:hidden bg-[#111111] rounded-2xl shadow-md p-4 border border-[#222222]">
           <div className={tab === "draw" ? "block" : "hidden"}>
             <SketchCanvas onGenerate={handleGenerate} isLoading={isLoading} />
           </div>
@@ -92,7 +92,7 @@ export default function Home() {
               {!isLoading && (
                 <button
                   onClick={() => setTab("draw")}
-                  className="mt-4 w-full py-2.5 border border-indigo-300 text-indigo-500 rounded-xl text-sm font-medium"
+                  className="mt-4 w-full py-2.5 border border-indigo-700 text-indigo-400 rounded-xl text-sm font-medium"
                 >
                   ← 返回画布
                 </button>

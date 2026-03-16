@@ -155,7 +155,7 @@ export default function SketchCanvas({ onGenerate, isLoading }: Props) {
             className="w-8 h-8 rounded-full border-2 transition-transform active:scale-95"
             style={{
               backgroundColor: c,
-              borderColor: color === c ? "#6366f1" : "#d1d5db",
+              borderColor: color === c ? "#6366f1" : "#444444",
               boxShadow: color === c ? "0 0 0 2px #6366f1" : undefined,
             }}
           />
@@ -165,7 +165,7 @@ export default function SketchCanvas({ onGenerate, isLoading }: Props) {
           className="w-8 h-8 rounded-full border-2 flex items-center justify-center text-base transition-transform active:scale-95"
           title="橡皮擦"
           style={{
-            borderColor: color === "eraser" ? "#6366f1" : "#d1d5db",
+            borderColor: color === "eraser" ? "#6366f1" : "#444444",
             boxShadow: color === "eraser" ? "0 0 0 2px #6366f1" : undefined,
           }}
         >
@@ -176,30 +176,13 @@ export default function SketchCanvas({ onGenerate, isLoading }: Props) {
         </button>
       </div>
 
-      {/* 操作按钮 */}
-      <div className="flex gap-2">
-        <button onClick={undo} className="flex-1 py-1.5 text-sm text-gray-500 border border-gray-300 rounded-lg active:bg-gray-100">
-          ↩ 撤回
-        </button>
-        <button onClick={redo} className="flex-1 py-1.5 text-sm text-gray-500 border border-gray-300 rounded-lg active:bg-gray-100">
-          ↪ 重做
-        </button>
-        <button onClick={clear} className="flex-1 py-1.5 text-sm text-gray-500 border border-gray-300 rounded-lg active:bg-gray-100">
-          🗑️ 清空
-        </button>
-        <label className="flex-1 py-1.5 text-sm text-gray-500 border border-gray-300 rounded-lg active:bg-gray-100 cursor-pointer text-center">
-          📁 上传
-          <input type="file" accept="image/*" className="hidden" onChange={handleUpload} />
-        </label>
-      </div>
-
       {/* 笔刷大小 */}
       <style dangerouslySetInnerHTML={{ __html: `
-        #${sliderId} { -webkit-appearance: none; appearance: none; height: 4px; background: #e5e7eb; border-radius: 9999px; outline: none; width: 100%; }
+        #${sliderId} { -webkit-appearance: none; appearance: none; height: 4px; background: #333333; border-radius: 9999px; outline: none; width: 100%; }
         #${sliderId}::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: ${thumbSize}px; height: ${thumbSize}px; border-radius: 50%; background: #6366f1; cursor: pointer; border: 2px solid white; box-shadow: 0 0 0 1.5px #6366f1; }
         #${sliderId}::-moz-range-thumb { width: ${thumbSize}px; height: ${thumbSize}px; border-radius: 50%; background: #6366f1; cursor: pointer; border: 2px solid white; }
       ` }} />
-      <div className="flex items-center gap-3 text-sm text-gray-500" style={{ paddingLeft: 25, paddingRight: 25, minHeight: thumbSize + 8 }}>
+      <div className="flex items-center gap-3 text-sm text-gray-400" style={{ minHeight: thumbSize + 8 }}>
         <span className="shrink-0">笔刷</span>
         <input
           id={sliderId}
@@ -210,13 +193,30 @@ export default function SketchCanvas({ onGenerate, isLoading }: Props) {
         <span className="w-8 text-right">{brushSize}px</span>
       </div>
 
+      {/* 操作按钮 */}
+      <div className="flex gap-2">
+        <button onClick={undo} className="flex-1 py-1.5 text-sm text-gray-400 border border-[#333333] rounded-lg active:bg-[#222222] bg-[#1a1a1a]">
+          ↩ 撤回
+        </button>
+        <button onClick={redo} className="flex-1 py-1.5 text-sm text-gray-400 border border-[#333333] rounded-lg active:bg-[#222222] bg-[#1a1a1a]">
+          ↪ 重做
+        </button>
+        <button onClick={clear} className="flex-1 py-1.5 text-sm text-gray-400 border border-[#333333] rounded-lg active:bg-[#222222] bg-[#1a1a1a]">
+          🗑️ 清空
+        </button>
+        <label className="flex-1 py-1.5 text-sm text-gray-400 border border-[#333333] rounded-lg active:bg-[#222222] bg-[#1a1a1a] cursor-pointer text-center">
+          📁 上传
+          <input type="file" accept="image/*" className="hidden" onChange={handleUpload} />
+        </label>
+      </div>
+
       {/* 画布 */}
       <div className="relative">
         <canvas
           ref={canvasRef}
           width={600}
           height={500}
-          className="w-full rounded-xl border-2 border-dashed border-gray-300 bg-white touch-none"
+          className="w-full rounded-xl border-2 border-dashed border-[#444444] bg-white touch-none"
           style={{ cursor: "none" }}
           onMouseDown={startDraw}
           onMouseMove={handleCanvasMouseMove}
@@ -256,7 +256,7 @@ export default function SketchCanvas({ onGenerate, isLoading }: Props) {
         placeholder={promptRequired ? "文字提示词（必填）" : "文字提示词（选填）"}
         value={prompt}
         onChange={(e) => setPrompt(e.target.value)}
-        className="w-full px-4 py-3 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
+        className="w-full px-4 py-3 border border-[#333333] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-[#1a1a1a] text-gray-200 placeholder-gray-600"
       />
 
       {/* 模型选择 */}
@@ -268,8 +268,8 @@ export default function SketchCanvas({ onGenerate, isLoading }: Props) {
             title={hint}
             className={`flex-1 py-1.5 text-sm rounded-lg border transition-colors ${
               model === value
-                ? "bg-indigo-500 text-white border-indigo-500"
-                : "text-gray-500 border-gray-300 hover:border-indigo-300"
+                ? "bg-indigo-600 text-white border-indigo-600"
+                : "text-gray-400 border-[#333333] hover:border-indigo-600 bg-[#1a1a1a]"
             }`}
           >
             {label}
@@ -281,7 +281,7 @@ export default function SketchCanvas({ onGenerate, isLoading }: Props) {
       <button
         onClick={() => onGenerate(canvasRef.current!.toDataURL("image/jpeg", 0.9), prompt, model)}
         disabled={isLoading}
-        className="w-full py-3.5 bg-indigo-500 hover:bg-indigo-600 disabled:bg-indigo-300 active:bg-indigo-700 text-white font-bold rounded-xl transition-colors text-base"
+        className="w-full py-3.5 bg-indigo-600 hover:bg-indigo-500 disabled:bg-indigo-900 disabled:text-indigo-600 active:bg-indigo-700 text-white font-bold rounded-xl transition-colors text-base"
       >
         {isLoading ? "生成中..." : "✨ 生成图片"}
       </button>
