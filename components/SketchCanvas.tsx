@@ -141,7 +141,9 @@ export default function SketchCanvas({ onGenerate, isLoading }: Props) {
     e.target.value = ""; // 允许重复上传同一文件
   };
 
-  const thumbSize = Math.max(12, brushSize);
+  const thumbVisual = Math.max(12, brushSize);
+  const thumbHit = Math.max(28, thumbVisual);
+  const r = thumbVisual / 2;
   const promptRequired = model === "wanx";
 
   return (
@@ -179,10 +181,10 @@ export default function SketchCanvas({ onGenerate, isLoading }: Props) {
       {/* 笔刷大小 */}
       <style dangerouslySetInnerHTML={{ __html: `
         #${sliderId} { -webkit-appearance: none; appearance: none; height: 4px; background: #333333; border-radius: 9999px; outline: none; width: 100%; }
-        #${sliderId}::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: ${thumbSize}px; height: ${thumbSize}px; border-radius: 50%; background: #6366f1; cursor: pointer; border: 2px solid white; box-shadow: 0 0 0 1.5px #6366f1; }
-        #${sliderId}::-moz-range-thumb { width: ${thumbSize}px; height: ${thumbSize}px; border-radius: 50%; background: #6366f1; cursor: pointer; border: 2px solid white; }
+        #${sliderId}::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: ${thumbHit}px; height: ${thumbHit}px; border-radius: 50%; background: radial-gradient(circle, #9ca3af ${r - 2}px, #555555 ${r - 2}px, #555555 ${r}px, transparent ${r}px); cursor: pointer; border: none; }
+        #${sliderId}::-moz-range-thumb { width: ${thumbHit}px; height: ${thumbHit}px; border-radius: 50%; background: radial-gradient(circle, #9ca3af ${r - 2}px, #555555 ${r - 2}px, #555555 ${r}px, transparent ${r}px); cursor: pointer; border: none; }
       ` }} />
-      <div className="flex items-center gap-3 text-sm text-gray-400" style={{ minHeight: thumbSize + 8 }}>
+      <div className="flex items-center gap-3 text-sm text-gray-400" style={{ height: 58 }}>
         <span className="shrink-0">笔刷</span>
         <input
           id={sliderId}
