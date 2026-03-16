@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Sketch to Image",
+  title: "涂鸦神笔",
   description: "随手涂鸦，AI 帮你变成精美图片",
 };
 
