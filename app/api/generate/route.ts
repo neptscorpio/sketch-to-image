@@ -5,19 +5,16 @@ const SUBMIT_URL = "https://dashscope.aliyuncs.com/api/v1/services/aigc/image2im
 const TASK_URL   = "https://dashscope.aliyuncs.com/api/v1/tasks";
 
 async function uploadToOSS(base64: string): Promise<string> {
-  // 1. 获取 OSS 上传凭证
   const policyRes = await fetch(
     "https://dashscope.aliyuncs.com/api/v1/uploads?action=getPolicy&model=wanx-sketch-to-image-lite",
     { headers: { Authorization: `Bearer ${API_KEY}` } }
   );
   const policyData = await policyRes.json();
-  console.log("Policy:", JSON.stringify(policyData));
   if (!policyRes.ok) throw new Error(`获取凭证失败: ${JSON.stringify(policyData)}`);
 
   const { oss_access_key_id, policy, signature, upload_dir, upload_host,
           x_oss_object_acl, x_oss_forbid_overwrite } = policyData.data;
 
-  // 2. 上传文件
   const raw      = base64.replace(/^data:image\/\w+;base64,/, "");
   const buffer   = Buffer.from(raw, "base64");
   const filename = `sketch_${Date.now()}.jpg`;
@@ -25,13 +22,13 @@ async function uploadToOSS(base64: string): Promise<string> {
   const key      = `${dir}${filename}`;
 
   const form = new FormData();
-  form.append("OSSAccessKeyId",        oss_access_key_id);
-  form.append("policy",                policy);
-  form.append("Signature",             signature);
-  form.append("key",                   key);
-  form.append("x-oss-object-acl",      x_oss_object_acl);
-  form.append("x-oss-forbid-overwrite",x_oss_forbid_overwrite);
-  form.append("success_action_status", "200");
+  form.append("OSSAccessKeyId",         oss_access_key_id);
+  form.append("policy",                 policy);
+  form.append("Signature",              signature);
+  form.append("key",                    key);
+  form.append("x-oss-object-acl",       x_oss_object_acl);
+  form.append("x-oss-forbid-overwrite", x_oss_forbid_overwrite);
+  form.append("success_action_status",  "200");
   form.append("file", new Blob([buffer], { type: "image/jpeg" }), filename);
 
   const uploadRes = await fetch(upload_host, { method: "POST", body: form });
@@ -40,23 +37,16 @@ async function uploadToOSS(base64: string): Promise<string> {
     throw new Error(`OSS 上传失败: ${uploadRes.status} - ${text}`);
   }
 
-  // 3. 构造 oss:// URL，格式: oss://{key}（不含 bucket）
-  const sketchUrl = `oss://${key}`;
-  console.log("upload_host:", upload_host);
-  console.log("upload_dir:", upload_dir);
-  console.log("key:", key);
-  console.log("Sketch URL:", sketchUrl);
-  console.log("Buffer size:", buffer.length, "bytes");
-  return sketchUrl;
+  return `oss://${key}`;
 }
 
 async function submitTask(sketchUrl: string, prompt: string): Promise<string> {
   const res = await fetch(SUBMIT_URL, {
     method: "POST",
     headers: {
-      Authorization:                  `Bearer ${API_KEY}`,
-      "Content-Type":                 "application/json",
-      "X-DashScope-Async":            "enable",
+      Authorization:                    `Bearer ${API_KEY}`,
+      "Content-Type":                   "application/json",
+      "X-DashScope-Async":              "enable",
       "X-DashScope-OssResourceResolve": "enable",
     },
     body: JSON.stringify({
@@ -66,7 +56,6 @@ async function submitTask(sketchUrl: string, prompt: string): Promise<string> {
     }),
   });
   const data = await res.json();
-  console.log("Submit:", JSON.stringify(data));
   if (!res.ok) throw new Error(`提交失败: ${data.message ?? JSON.stringify(data)}`);
   return data.output.task_id as string;
 }
@@ -95,7 +84,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ image: imageUrl });
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
-    console.error("Error:", msg);
+    console.error("generate error:", msg);
     return NextResponse.json({ error: msg }, { status: 500 });
   }
 }

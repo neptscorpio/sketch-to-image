@@ -1,11 +1,14 @@
 "use client";
 
 import { useRef, useState, useEffect, useId } from "react";
+import { useCanvasHistory } from "@/hooks/useCanvasHistory";
 
 interface Props {
   onGenerate: (imageData: string, prompt: string) => void;
   isLoading: boolean;
 }
+
+const COLORS = ["#000000", "#ef4444", "#3b82f6", "#22c55e", "#f97316", "#a855f7", "#ffffff"];
 
 export default function SketchCanvas({ onGenerate, isLoading }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -13,10 +16,10 @@ export default function SketchCanvas({ onGenerate, isLoading }: Props) {
   const [brushSize, setBrushSize] = useState(4);
   const [color, setColor] = useState("#000000");
   const [prompt, setPrompt] = useState("");
-  const sliderId = useId().replace(/:/g, "-");
   const lastPos = useRef<{ x: number; y: number } | null>(null);
-  const history = useRef<ImageData[]>([]);
-  const redoStack = useRef<ImageData[]>([]);
+  const sliderId = useId().replace(/:/g, "-");
+
+  const { initHistory, saveHistory, undo, redo } = useCanvasHistory(canvasRef);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -24,17 +27,18 @@ export default function SketchCanvas({ onGenerate, isLoading }: Props) {
     const ctx = canvas.getContext("2d")!;
     ctx.fillStyle = "#ffffff";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
-    // 保存初始空白状态
-    history.current = [ctx.getImageData(0, 0, canvas.width, canvas.height)];
-  }, []);
+    initHistory();
+  }, [initHistory]);
 
-  const saveHistory = () => {
-    const canvas = canvasRef.current!;
-    const ctx = canvas.getContext("2d")!;
-    const snap = ctx.getImageData(0, 0, canvas.width, canvas.height);
-    history.current = [...history.current.slice(-19), snap]; // 最多保留 20 步
-    redoStack.current = []; // 新操作清空 redo
-  };
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const mod = e.metaKey || e.ctrlKey;
+      if (mod && e.key === "z" && !e.shiftKey) { e.preventDefault(); undo(); }
+      if (mod && (e.key === "y" || (e.key === "z" && e.shiftKey))) { e.preventDefault(); redo(); }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [undo, redo]);
 
   const getPos = (e: React.MouseEvent | React.TouchEvent) => {
     const canvas = canvasRef.current!;
@@ -77,28 +81,9 @@ export default function SketchCanvas({ onGenerate, isLoading }: Props) {
   };
 
   const stopDraw = () => {
-    if (isDrawing) saveHistory(); // 每笔结束后保存当前状态
+    if (isDrawing) saveHistory();
     setIsDrawing(false);
     lastPos.current = null;
-  };
-
-  const undo = () => {
-    if (history.current.length <= 1) return;
-    const canvas = canvasRef.current!;
-    const ctx = canvas.getContext("2d")!;
-    redoStack.current = [...redoStack.current, history.current[history.current.length - 1]];
-    history.current = history.current.slice(0, -1);
-    ctx.putImageData(history.current[history.current.length - 1], 0, 0);
-  };
-
-  const redo = () => {
-    if (redoStack.current.length === 0) return;
-    const canvas = canvasRef.current!;
-    const ctx = canvas.getContext("2d")!;
-    const next = redoStack.current[redoStack.current.length - 1];
-    redoStack.current = redoStack.current.slice(0, -1);
-    history.current = [...history.current, next];
-    ctx.putImageData(next, 0, 0);
   };
 
   const clear = () => {
@@ -109,28 +94,13 @@ export default function SketchCanvas({ onGenerate, isLoading }: Props) {
     ctx.fillRect(0, 0, canvas.width, canvas.height);
   };
 
-  const handleGenerate = () => {
-    const canvas = canvasRef.current!;
-    onGenerate(canvas.toDataURL("image/jpeg", 0.9), prompt);
-  };
-
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      const mod = e.metaKey || e.ctrlKey;
-      if (mod && e.key === "z" && !e.shiftKey) { e.preventDefault(); undo(); }
-      if (mod && (e.key === "y" || (e.key === "z" && e.shiftKey))) { e.preventDefault(); redo(); }
-    };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, []);
-
-  const colors = ["#000000", "#ef4444", "#3b82f6", "#22c55e", "#f97316", "#a855f7", "#ffffff"];
+  const thumbSize = Math.max(12, brushSize);
 
   return (
     <div className="flex flex-col gap-3">
-      {/* Row 1: 颜色 */}
+      {/* 颜色选择 */}
       <div className="flex items-center gap-2 flex-wrap">
-        {colors.map((c) => (
+        {COLORS.map((c) => (
           <button
             key={c}
             onClick={() => setColor(c)}
@@ -144,33 +114,24 @@ export default function SketchCanvas({ onGenerate, isLoading }: Props) {
         ))}
       </div>
 
-      {/* Row 2: 操作按钮 */}
+      {/* 操作按钮 */}
       <div className="flex gap-2">
-        <button
-          onClick={undo}
-          className="flex-1 py-1.5 text-sm text-gray-500 border border-gray-300 rounded-lg active:bg-gray-100"
-        >
+        <button onClick={undo} className="flex-1 py-1.5 text-sm text-gray-500 border border-gray-300 rounded-lg active:bg-gray-100">
           ↩ 撤回
         </button>
-        <button
-          onClick={redo}
-          className="flex-1 py-1.5 text-sm text-gray-500 border border-gray-300 rounded-lg active:bg-gray-100"
-        >
+        <button onClick={redo} className="flex-1 py-1.5 text-sm text-gray-500 border border-gray-300 rounded-lg active:bg-gray-100">
           ↪ 重做
         </button>
-        <button
-          onClick={clear}
-          className="flex-1 py-1.5 text-sm text-gray-500 border border-gray-300 rounded-lg active:bg-gray-100"
-        >
+        <button onClick={clear} className="flex-1 py-1.5 text-sm text-gray-500 border border-gray-300 rounded-lg active:bg-gray-100">
           清空
         </button>
       </div>
 
-      {/* Row 2: 笔刷大小 */}
+      {/* 笔刷大小 */}
       <style dangerouslySetInnerHTML={{ __html: `
         #${sliderId} { -webkit-appearance: none; appearance: none; height: 4px; background: #e5e7eb; border-radius: 9999px; outline: none; width: 100%; }
-        #${sliderId}::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: ${Math.max(12, brushSize)}px; height: ${Math.max(12, brushSize)}px; border-radius: 50%; background: #6366f1; cursor: pointer; border: 2px solid white; box-shadow: 0 0 0 1.5px #6366f1; }
-        #${sliderId}::-moz-range-thumb { width: ${Math.max(12, brushSize)}px; height: ${Math.max(12, brushSize)}px; border-radius: 50%; background: #6366f1; cursor: pointer; border: 2px solid white; box-shadow: 0 0 0 1.5px #6366f1; border: 2px solid white; }
+        #${sliderId}::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: ${thumbSize}px; height: ${thumbSize}px; border-radius: 50%; background: #6366f1; cursor: pointer; border: 2px solid white; box-shadow: 0 0 0 1.5px #6366f1; }
+        #${sliderId}::-moz-range-thumb { width: ${thumbSize}px; height: ${thumbSize}px; border-radius: 50%; background: #6366f1; cursor: pointer; border: 2px solid white; }
       ` }} />
       <div className="flex items-center gap-3 text-sm text-gray-500">
         <span className="shrink-0">笔刷</span>
@@ -183,7 +144,7 @@ export default function SketchCanvas({ onGenerate, isLoading }: Props) {
         <span className="w-8 text-right">{brushSize}px</span>
       </div>
 
-      {/* Canvas */}
+      {/* 画布 */}
       <canvas
         ref={canvasRef}
         width={600}
@@ -198,7 +159,7 @@ export default function SketchCanvas({ onGenerate, isLoading }: Props) {
         onTouchEnd={stopDraw}
       />
 
-      {/* Prompt */}
+      {/* 描述输入 */}
       <input
         type="text"
         placeholder="描述你想生成的图片，如：a bird flying over the sea（必填）"
@@ -207,9 +168,9 @@ export default function SketchCanvas({ onGenerate, isLoading }: Props) {
         className="w-full px-4 py-3 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
       />
 
-      {/* Generate button */}
+      {/* 生成按钮 */}
       <button
-        onClick={handleGenerate}
+        onClick={() => onGenerate(canvasRef.current!.toDataURL("image/jpeg", 0.9), prompt)}
         disabled={isLoading}
         className="w-full py-3.5 bg-indigo-500 hover:bg-indigo-600 disabled:bg-indigo-300 active:bg-indigo-700 text-white font-bold rounded-xl transition-colors text-base"
       >
