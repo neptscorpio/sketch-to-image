@@ -14,6 +14,8 @@ export default function SketchCanvas({ onGenerate, isLoading }: Props) {
   const [color, setColor] = useState("#000000");
   const [prompt, setPrompt] = useState("");
   const lastPos = useRef<{ x: number; y: number } | null>(null);
+  const history = useRef<ImageData[]>([]);
+  const redoStack = useRef<ImageData[]>([]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -21,7 +23,17 @@ export default function SketchCanvas({ onGenerate, isLoading }: Props) {
     const ctx = canvas.getContext("2d")!;
     ctx.fillStyle = "#ffffff";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
+    // 保存初始空白状态
+    history.current = [ctx.getImageData(0, 0, canvas.width, canvas.height)];
   }, []);
+
+  const saveHistory = () => {
+    const canvas = canvasRef.current!;
+    const ctx = canvas.getContext("2d")!;
+    const snap = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    history.current = [...history.current.slice(-19), snap]; // 最多保留 20 步
+    redoStack.current = []; // 新操作清空 redo
+  };
 
   const getPos = (e: React.MouseEvent | React.TouchEvent) => {
     const canvas = canvasRef.current!;
@@ -64,11 +76,32 @@ export default function SketchCanvas({ onGenerate, isLoading }: Props) {
   };
 
   const stopDraw = () => {
+    if (isDrawing) saveHistory(); // 每笔结束后保存当前状态
     setIsDrawing(false);
     lastPos.current = null;
   };
 
+  const undo = () => {
+    if (history.current.length <= 1) return;
+    const canvas = canvasRef.current!;
+    const ctx = canvas.getContext("2d")!;
+    redoStack.current = [...redoStack.current, history.current[history.current.length - 1]];
+    history.current = history.current.slice(0, -1);
+    ctx.putImageData(history.current[history.current.length - 1], 0, 0);
+  };
+
+  const redo = () => {
+    if (redoStack.current.length === 0) return;
+    const canvas = canvasRef.current!;
+    const ctx = canvas.getContext("2d")!;
+    const next = redoStack.current[redoStack.current.length - 1];
+    redoStack.current = redoStack.current.slice(0, -1);
+    history.current = [...history.current, next];
+    ctx.putImageData(next, 0, 0);
+  };
+
   const clear = () => {
+    saveHistory();
     const canvas = canvasRef.current!;
     const ctx = canvas.getContext("2d")!;
     ctx.fillStyle = "#ffffff";
@@ -80,29 +113,53 @@ export default function SketchCanvas({ onGenerate, isLoading }: Props) {
     onGenerate(canvas.toDataURL("image/jpeg", 0.9), prompt);
   };
 
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const mod = e.metaKey || e.ctrlKey;
+      if (mod && e.key === "z" && !e.shiftKey) { e.preventDefault(); undo(); }
+      if (mod && (e.key === "y" || (e.key === "z" && e.shiftKey))) { e.preventDefault(); redo(); }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
+
   const colors = ["#000000", "#ef4444", "#3b82f6", "#22c55e", "#f97316", "#a855f7", "#ffffff"];
 
   return (
     <div className="flex flex-col gap-3">
-      {/* Row 1: 颜色 + 清空 */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          {colors.map((c) => (
-            <button
-              key={c}
-              onClick={() => setColor(c)}
-              className="w-8 h-8 rounded-full border-2 transition-transform active:scale-95"
-              style={{
-                backgroundColor: c,
-                borderColor: color === c ? "#6366f1" : "#d1d5db",
-                boxShadow: color === c ? "0 0 0 2px #6366f1" : undefined,
-              }}
-            />
-          ))}
-        </div>
+      {/* Row 1: 颜色 */}
+      <div className="flex items-center gap-2 flex-wrap">
+        {colors.map((c) => (
+          <button
+            key={c}
+            onClick={() => setColor(c)}
+            className="w-8 h-8 rounded-full border-2 transition-transform active:scale-95"
+            style={{
+              backgroundColor: c,
+              borderColor: color === c ? "#6366f1" : "#d1d5db",
+              boxShadow: color === c ? "0 0 0 2px #6366f1" : undefined,
+            }}
+          />
+        ))}
+      </div>
+
+      {/* Row 2: 操作按钮 */}
+      <div className="flex gap-2">
+        <button
+          onClick={undo}
+          className="flex-1 py-1.5 text-sm text-gray-500 border border-gray-300 rounded-lg active:bg-gray-100"
+        >
+          ↩ 撤回
+        </button>
+        <button
+          onClick={redo}
+          className="flex-1 py-1.5 text-sm text-gray-500 border border-gray-300 rounded-lg active:bg-gray-100"
+        >
+          ↪ 重做
+        </button>
         <button
           onClick={clear}
-          className="px-3 py-1.5 text-sm text-gray-500 border border-gray-300 rounded-lg active:bg-gray-100"
+          className="flex-1 py-1.5 text-sm text-gray-500 border border-gray-300 rounded-lg active:bg-gray-100"
         >
           清空
         </button>
