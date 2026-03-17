@@ -11,10 +11,17 @@ interface Props {
 
 const COLORS = ["#000000", "#ef4444", "#3b82f6", "#22c55e", "#f97316", "#a855f7", "#ffffff"];
 
-const MODEL_OPTIONS: { value: Model; label: string; hint: string }[] = [
-  { value: "wanx",         label: "万相",            hint: "草图还原度高，prompt 必填" },
-  { value: "seedream",     label: "Seedream 4.5",    hint: "画质更精细，prompt 选填" },
-  { value: "seedream5lite",label: "Seedream 5 Lite", hint: "最新模型，prompt 选填" },
+const STYLE_PRESETS: { label: string; prompt: string }[] = [
+  { label: "真实摄影", prompt: "真实摄影风格" },
+  { label: "艺术", prompt: "艺术绘画风格，随机选择油画、国画、插画、素描、抽象画等艺术绘画品类之一" },
+  { label: "二次元", prompt: "二次元风格" },
+  { label: "电影镜头", prompt: "电影镜头风格" },
+];
+
+const MODEL_OPTIONS: { value: Model; label: string; hint: string; badge?: string }[] = [
+  { value: "seedream5lite", label: "Seedream 5 Lite", hint: "最新模型，prompt 选填", badge: "推荐" },
+  { value: "seedream",      label: "Seedream 4.5",    hint: "画质更精细，prompt 选填" },
+  { value: "wanx",          label: "万相",             hint: "草图还原度高，prompt 必填" },
 ];
 
 export default function SketchCanvas({ onGenerate, isLoading }: Props) {
@@ -23,7 +30,8 @@ export default function SketchCanvas({ onGenerate, isLoading }: Props) {
   const [brushSize, setBrushSize] = useState(4);
   const [color, setColor] = useState("#000000");
   const [prompt, setPrompt] = useState("");
-  const [model, setModel] = useState<Model>("seedream");
+  const [selectedStyle, setSelectedStyle] = useState<string | null>(null);
+  const [model, setModel] = useState<Model>("seedream5lite");
   const [eraserCursor, setEraserCursor] = useState<{ x: number; y: number } | null>(null);
   const lastPos = useRef<{ x: number; y: number } | null>(null);
   const sliderId = useId().replace(/:/g, "-");
@@ -252,29 +260,59 @@ export default function SketchCanvas({ onGenerate, isLoading }: Props) {
         })()}
       </div>
 
+      {/* 风格预设 */}
+      <div className="flex gap-2 flex-wrap">
+        {STYLE_PRESETS.map(({ label, prompt: stylePrompt }) => (
+          <button
+            key={label}
+            onClick={() => {
+              if (selectedStyle === label) {
+                setSelectedStyle(null);
+                setPrompt("");
+              } else {
+                setSelectedStyle(label);
+                setPrompt(stylePrompt);
+              }
+            }}
+            className={`px-3 py-1 text-sm rounded-lg border transition-colors ${
+              selectedStyle === label
+                ? "bg-indigo-600 text-white border-indigo-600"
+                : "text-gray-400 border-[#333333] bg-[#1a1a1a] hover:border-indigo-600"
+            }`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
       {/* 描述输入 */}
       <input
         type="text"
         placeholder={promptRequired ? "文字提示词（必填）" : "文字提示词（选填）"}
         value={prompt}
-        onChange={(e) => setPrompt(e.target.value)}
+        onChange={(e) => { setPrompt(e.target.value); setSelectedStyle(null); }}
         className="w-full px-4 py-3 border border-[#333333] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-[#1a1a1a] text-gray-200 placeholder-gray-600"
       />
 
       {/* 模型选择 */}
       <div className="flex gap-2">
-        {MODEL_OPTIONS.map(({ value, label, hint }) => (
+        {MODEL_OPTIONS.map(({ value, label, hint, badge }) => (
           <button
             key={value}
             onClick={() => setModel(value)}
             title={hint}
-            className={`flex-1 py-1.5 text-sm rounded-lg border transition-colors ${
+            className={`relative flex-1 py-1.5 text-sm rounded-lg border transition-colors ${
               model === value
                 ? "bg-indigo-600 text-white border-indigo-600"
                 : "text-gray-400 border-[#333333] hover:border-indigo-600 bg-[#1a1a1a]"
             }`}
           >
             {label}
+            {badge && (
+              <span className="absolute -top-2 -right-1 px-1 py-px text-[10px] leading-none rounded bg-yellow-400 text-black font-semibold">
+                {badge}
+              </span>
+            )}
           </button>
         ))}
       </div>

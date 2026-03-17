@@ -122,14 +122,17 @@ export async function POST(req: NextRequest) {
       model?: Model;
     };
 
+    const PREFIX = "先理解草图传达的核心场景信息（即，用一句话描述场景，包括人物、物体、位置、颜色等，比如：一个戴红色帽子蓝裤子的女生，抱着一个橘猫）。再根据这个核心场景的描述信息生成一张新的高质量图像。不要照搬草图的线条。注意生成图像的美感和质量。";
+    const fullPrompt = prompt?.trim() ? `${PREFIX}${prompt.trim()}` : PREFIX;
+
     if (model === "seedream" || model === "seedream5lite") {
-      const imageUrl = await generateWithSeedream(imageData, prompt, model);
+      const imageUrl = await generateWithSeedream(imageData, fullPrompt, model);
       return NextResponse.json({ image: imageUrl });
     }
 
     // 万相: prompt required
     if (!prompt?.trim()) return NextResponse.json({ error: "请填写描述" }, { status: 400 });
-    const imageUrl = await generateWithWanx(imageData, prompt);
+    const imageUrl = await generateWithWanx(imageData, fullPrompt);
     return NextResponse.json({ image: imageUrl });
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
