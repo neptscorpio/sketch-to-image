@@ -10,16 +10,26 @@ interface Props {
 }
 
 async function saveFile(url: string, filename: string) {
+  let blobUrl: string | null = null;
   try {
     const res = await fetch(url);
     const blob = await res.blob();
     const ext = blob.type.includes("jpeg") ? "jpg" : "png";
-    const file = new File([blob], filename.replace(/\.\w+$/, `.${ext}`), { type: blob.type });
+    const name = filename.replace(/\.\w+$/, `.${ext}`);
+    const file = new File([blob], name, { type: blob.type });
     if (navigator.canShare?.({ files: [file] })) {
-      await navigator.share({ files: [file], title: filename });
+      await navigator.share({ files: [file], title: name });
       return;
     }
-  } catch { /* fallback */ }
+    blobUrl = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = blobUrl;
+    a.download = name;
+    a.click();
+    return;
+  } catch { /* fallback */ } finally {
+    if (blobUrl) setTimeout(() => URL.revokeObjectURL(blobUrl!), 10000);
+  }
   const a = document.createElement("a");
   a.href = url;
   a.download = filename;

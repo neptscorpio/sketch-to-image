@@ -3,6 +3,7 @@
 import { useRef, useState, useEffect, useId } from "react";
 import { useCanvasHistory } from "@/hooks/useCanvasHistory";
 import type { Model } from "@/lib/types";
+import { STYLE_PRESETS } from "@/lib/constants";
 
 interface Props {
   onGenerate: (imageData: string, prompt: string, model: Model) => void;
@@ -11,12 +12,6 @@ interface Props {
 
 const COLORS = ["#000000", "#ef4444", "#3b82f6", "#22c55e", "#f97316", "#a855f7", "#ffffff"];
 
-const STYLE_PRESETS: { label: string; prompt: string }[] = [
-  { label: "真实摄影", prompt: "真实摄影风格" },
-  { label: "艺术", prompt: "艺术绘画风格，随机选择油画、国画、插画、素描、抽象画等艺术绘画品类之一" },
-  { label: "二次元", prompt: "二次元风格" },
-  { label: "电影镜头", prompt: "电影镜头风格" },
-];
 
 const MODEL_OPTIONS: { value: Model; label: string; hint: string; badge?: string }[] = [
   { value: "seedream5lite", label: "Seedream 5 Lite", hint: "最新模型，prompt 选填", badge: "推荐" },
@@ -27,10 +22,10 @@ const MODEL_OPTIONS: { value: Model; label: string; hint: string; badge?: string
 export default function SketchCanvas({ onGenerate, isLoading }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isDrawing, setIsDrawing] = useState(false);
-  const [brushSize, setBrushSize] = useState(4);
+  const [brushSize, setBrushSize] = useState(16);
   const [color, setColor] = useState("#000000");
   const [prompt, setPrompt] = useState("");
-  const [selectedStyle, setSelectedStyle] = useState<string | null>(null);
+  const selectedStyle = STYLE_PRESETS.find((p) => p.prompt === prompt)?.label ?? null;
   const [model, setModel] = useState<Model>("seedream5lite");
   const [eraserCursor, setEraserCursor] = useState<{ x: number; y: number } | null>(null);
   const lastPos = useRef<{ x: number; y: number } | null>(null);
@@ -265,15 +260,7 @@ export default function SketchCanvas({ onGenerate, isLoading }: Props) {
         {STYLE_PRESETS.map(({ label, prompt: stylePrompt }) => (
           <button
             key={label}
-            onClick={() => {
-              if (selectedStyle === label) {
-                setSelectedStyle(null);
-                setPrompt("");
-              } else {
-                setSelectedStyle(label);
-                setPrompt(stylePrompt);
-              }
-            }}
+            onClick={() => setPrompt(selectedStyle === label ? "" : stylePrompt)}
             className={`px-3 py-1 text-sm rounded-lg border transition-colors ${
               selectedStyle === label
                 ? "bg-indigo-600 text-white border-indigo-600"
@@ -290,7 +277,7 @@ export default function SketchCanvas({ onGenerate, isLoading }: Props) {
         type="text"
         placeholder={promptRequired ? "文字提示词（必填）" : "文字提示词（选填）"}
         value={prompt}
-        onChange={(e) => { setPrompt(e.target.value); setSelectedStyle(null); }}
+        onChange={(e) => setPrompt(e.target.value)}
         className="w-full px-4 py-3 border border-[#333333] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-[#1a1a1a] text-gray-200 placeholder-gray-600"
       />
 
