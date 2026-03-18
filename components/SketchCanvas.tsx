@@ -22,7 +22,7 @@ const MODEL_OPTIONS: { value: Model; label: string; hint: string; badge?: string
 export default function SketchCanvas({ onGenerate, isLoading }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isDrawing, setIsDrawing] = useState(false);
-  const [brushSize, setBrushSize] = useState(16);
+  const [brushSize, setBrushSize] = useState(18);
   const [color, setColor] = useState("#000000");
   const [prompt, setPrompt] = useState("");
   const selectedStyle = STYLE_PRESETS.find((p) => p.prompt === prompt)?.label ?? null;

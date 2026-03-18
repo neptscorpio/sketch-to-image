@@ -43,7 +43,7 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-black flex flex-col">
       <header className="py-4 px-4 text-center">
-        <h1 className="text-2xl font-bold text-indigo-400">🎨 涂鸦神笔</h1>
+        <h1 className="text-2xl font-bold text-indigo-400">涂鸦神笔</h1>
         <p className="text-gray-500 text-xs mt-1">随手涂鸦，AI 帮你变成精美图片</p>
       </header>
 
